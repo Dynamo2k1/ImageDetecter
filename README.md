@@ -109,6 +109,34 @@ Supported file types:
 
 **📚 For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md)**
 
+---
+
+## ✅ Runtime Validation & Demo Artifacts
+
+The FEAS project has been executed locally and validated with both backend and frontend checks.
+
+### Validation Commands
+
+```bash
+# Backend tests
+cd backend
+python -m pytest tests/ -v
+
+# Frontend production build
+cd ../frontend
+npm run build
+```
+
+### Captured Runtime Media
+
+The following artifacts were captured from a live FEAS run:
+
+- **Home Screen Screenshot:** [`docs/media/feas-home.png`](docs/media/feas-home.png)
+- **Submission Screen Screenshot:** [`docs/media/feas-submission.png`](docs/media/feas-submission.png)
+- **Short Demo Video:** [`docs/media/feas-demo.webm`](docs/media/feas-demo.webm)
+
+These media files provide visual confirmation of application startup, routing, and UI availability.
+
 ### Option 1: Quick Start (Docker) 🐳
 
 1.  **Clone the repository**

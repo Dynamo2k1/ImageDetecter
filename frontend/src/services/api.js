@@ -72,6 +72,7 @@ export const forensicAPI = {
   getJobStatus: (id) => api.get(`/jobs/${id}/status`),
   getJobDetails: (id) => api.get(`/jobs/${id}/details`),
   verifyIntegrity: (id) => api.post(`/jobs/${id}/verify`),
+  runNetworkScan: (data) => api.post('/scans/network', data),
   getAnalytics: (period) => api.get(`/analytics?period=${period}`),
   
   downloadReport: async (jobId) => {

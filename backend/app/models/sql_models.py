@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Integer, Boolean
+from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Integer, Boolean, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -36,6 +36,9 @@ class Job(Base):
 
     # Relationships
     custody_logs = relationship("ChainOfCustody", back_populates="job", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="job", cascade="all, delete-orphan")
+    integrity_alerts = relationship("IntegrityAlert", back_populates="job", cascade="all, delete-orphan")
+    correlations = relationship("EvidenceCorrelation", back_populates="job", cascade="all, delete-orphan")
 
 class ChainOfCustody(Base):
     __tablename__ = "chain_of_custody"
@@ -49,6 +52,102 @@ class ChainOfCustody(Base):
     hash_verification = Column(String, nullable=True)
 
     job = relationship("Job", back_populates="custody_logs")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=True, index=True)
+    action = Column(String, nullable=False, index=True)  # upload, view, delete, scan
+    user_id = Column(String, nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    details = Column(JSON, nullable=True)
+
+    job = relationship("Job", back_populates="audit_logs")
+
+
+class NetworkScan(Base):
+    __tablename__ = "network_scans"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    case_number = Column(String, nullable=False, index=True)
+    target = Column(String, nullable=False, index=True)
+    initiated_by = Column(String, nullable=False, index=True)
+    command = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending", index=True)
+    raw_output = Column(Text, nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    ports = relationship("ScanPort", back_populates="scan", cascade="all, delete-orphan")
+    vulnerabilities = relationship("VulnerabilityFinding", back_populates="scan", cascade="all, delete-orphan")
+    correlations = relationship("EvidenceCorrelation", back_populates="scan", cascade="all, delete-orphan")
+
+
+class ScanPort(Base):
+    __tablename__ = "scan_ports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    scan_id = Column(String, ForeignKey("network_scans.id"), nullable=False, index=True)
+    port = Column(Integer, nullable=False, index=True)
+    protocol = Column(String, nullable=False, default="tcp")
+    state = Column(String, nullable=False, default="open")
+    service = Column(String, nullable=True)
+    version = Column(String, nullable=True)
+
+    scan = relationship("NetworkScan", back_populates="ports")
+    vulnerabilities = relationship("VulnerabilityFinding", back_populates="port_ref", cascade="all, delete-orphan")
+
+
+class VulnerabilityFinding(Base):
+    __tablename__ = "vulnerability_findings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    scan_id = Column(String, ForeignKey("network_scans.id"), nullable=False, index=True)
+    scan_port_id = Column(Integer, ForeignKey("scan_ports.id"), nullable=True)
+    cve_id = Column(String, nullable=False, index=True)
+    service = Column(String, nullable=True, index=True)
+    version = Column(String, nullable=True)
+    risk_level = Column(String, nullable=False, index=True)  # Low, Medium, High
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    scan = relationship("NetworkScan", back_populates="vulnerabilities")
+    port_ref = relationship("ScanPort", back_populates="vulnerabilities")
+    correlations = relationship("EvidenceCorrelation", back_populates="vulnerability", cascade="all, delete-orphan")
+
+
+class IntegrityAlert(Base):
+    __tablename__ = "integrity_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
+    expected_hash = Column(String, nullable=False)
+    current_hash = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    detected_at = Column(DateTime, default=datetime.utcnow, index=True)
+    resolved = Column(Boolean, default=False)
+
+    job = relationship("Job", back_populates="integrity_alerts")
+
+
+class EvidenceCorrelation(Base):
+    __tablename__ = "evidence_correlations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False, index=True)
+    scan_id = Column(String, ForeignKey("network_scans.id"), nullable=False, index=True)
+    vulnerability_id = Column(Integer, ForeignKey("vulnerability_findings.id"), nullable=True)
+    correlation_type = Column(String, nullable=False)
+    confidence = Column(Float, default=0.5)
+    details = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    job = relationship("Job", back_populates="correlations")
+    scan = relationship("NetworkScan", back_populates="correlations")
+    vulnerability = relationship("VulnerabilityFinding", back_populates="correlations")
 
 class User(Base):
     __tablename__ = "users"

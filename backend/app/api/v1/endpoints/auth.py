@@ -215,3 +215,15 @@ async def get_me(current_user: User = Depends(get_current_user), db: Session = D
 async def logout():
     """Logout (client-side token removal)"""
     return {"message": "Successfully logged out"}
+
+
+def get_user_role(db: Session, user: User) -> str:
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return (profile.role if profile and profile.role else "Analyst").strip()
+
+
+def user_has_any_role(db: Session, user: User, allowed_roles: list[str]) -> bool:
+    if user.is_admin:
+        return True
+    role = get_user_role(db, user).lower()
+    return role in {r.lower() for r in allowed_roles}

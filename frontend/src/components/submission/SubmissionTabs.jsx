@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { FaGlobe, FaUpload, FaCheckCircle, FaShieldAlt } from 'react-icons/fa';
+import { FaGlobe, FaUpload, FaCheckCircle, FaShieldAlt, FaNetworkWired } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import URLInput from './URLInput';
 import FileUpload from './FileUpload';
+import NetworkScanInput from './NetworkScanInput';
 
 const Container = styled.div` background: ${({ theme }) => theme.cardBackground}; border: 1px solid ${({ theme }) => theme.cardBorder}; border-radius: 12px; overflow: hidden; `;
 const TabsHeader = styled.div` display: flex; border-bottom: 1px solid ${({ theme }) => theme.cardBorder}; background: ${({ theme }) => theme.background}; `;
@@ -35,10 +36,13 @@ const SubmissionTabs = () => {
           <TabsHeader>
             <Tab active={activeTab === 'url'} onClick={() => setActiveTab('url')}><FaGlobe /> URL Acquisition</Tab>
             <Tab active={activeTab === 'upload'} onClick={() => setActiveTab('upload')}><FaUpload /> Local Upload</Tab>
+            <Tab active={activeTab === 'scan'} onClick={() => setActiveTab('scan')}><FaNetworkWired /> Network Scan</Tab>
           </TabsHeader>
           <TabContent>
             {activeTab === 'url' ? (
               <URLInput onSubmit={handleSubmissionSuccess} />
+            ) : activeTab === 'scan' ? (
+              <NetworkScanInput onSubmit={handleSubmissionSuccess} />
             ) : (
               <FileUpload onSubmit={handleSubmissionSuccess} />
             )}

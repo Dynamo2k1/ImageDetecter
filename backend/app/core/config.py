@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     STORAGE_TYPE: str = "local"
     LOCAL_STORAGE_PATH: str = "./evidence_storage"
     MAX_FILE_SIZE: int = 500 * 1024 * 1024
+    EVIDENCE_ENCRYPTION_KEY: Optional[str] = None
+    EVIDENCE_ENCRYPTION_KEY_FILE: str = "./evidence_encryption.key"
 
     # --- S3 Settings (Optional) ---
     S3_ENDPOINT: Optional[str] = None

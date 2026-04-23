@@ -84,6 +84,9 @@ class JobDetailsResponse(BaseModel):
     storage_location: str
     created_at: datetime
     completed_at: Optional[datetime] = None
+    scan_results: Optional[List[Dict[str, Any]]] = None
+    vulnerabilities: Optional[List[Dict[str, Any]]] = None
+    risk_assessment: Optional[Dict[str, Any]] = None
     
     # Allow mapping if we ever use from_attributes here too
     model_config = ConfigDict(from_attributes=True)
@@ -106,3 +109,20 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: datetime
     services: Dict[str, str]
+
+
+class NetworkScanRequest(BaseModel):
+    target: str = Field(..., min_length=1, max_length=255)
+    case_number: str = Field(..., min_length=1, max_length=50)
+
+
+class NetworkScanResponse(BaseModel):
+    scan_id: str
+    case_number: str
+    target: str
+    status: str
+    command: str
+    ports: List[Dict[str, Any]]
+    vulnerabilities: List[Dict[str, Any]]
+    risk_assessment: Dict[str, Any]
+    correlations_created: int

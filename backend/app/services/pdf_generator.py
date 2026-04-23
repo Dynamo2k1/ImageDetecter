@@ -388,6 +388,84 @@ class PDFReportGenerator:
                 
                 if exif_data:
                     story.append(PDFReportGenerator._create_info_table(exif_data))
+
+            # ==================== NETWORK SCAN RESULTS ====================
+            if job_details.scan_results:
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("NETWORK SCAN RESULTS", "🌐"))
+                story.append(Spacer(1, 10))
+
+                scan_rows = [["Scan ID", "Target", "Status", "Open Ports"]]
+                for scan in job_details.scan_results:
+                    open_ports = scan.get("ports", [])
+                    ports_brief = ", ".join(str(p.get("port")) for p in open_ports[:6]) or "None"
+                    if len(open_ports) > 6:
+                        ports_brief += " ..."
+                    scan_rows.append([
+                        scan.get("scan_id", "N/A"),
+                        scan.get("target", "N/A"),
+                        scan.get("status", "N/A"),
+                        ports_brief
+                    ])
+                story.append(PDFReportGenerator._create_info_table(scan_rows, col_widths=[1.6*inch, 2*inch, 1*inch, 1.9*inch]))
+
+            # ==================== VULNERABILITY FINDINGS ====================
+            if job_details.vulnerabilities:
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("VULNERABILITY FINDINGS", "🛡️"))
+                story.append(Spacer(1, 10))
+
+                vuln_rows = [["CVE", "Service", "Version", "Risk", "Description"]]
+                for vuln in job_details.vulnerabilities[:25]:
+                    desc = vuln.get("description", "") or ""
+                    if len(desc) > 55:
+                        desc = desc[:55] + "..."
+                    vuln_rows.append([
+                        vuln.get("cve_id", "N/A"),
+                        vuln.get("service", "N/A"),
+                        vuln.get("version", "N/A"),
+                        vuln.get("risk_level", "Low"),
+                        desc
+                    ])
+
+                vuln_table = Table(vuln_rows, colWidths=[1.3*inch, 1.1*inch, 1.2*inch, 0.7*inch, 2.2*inch])
+                style_commands = [
+                    ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.SECONDARY),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 9),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('PADDING', (0, 0), (-1, -1), 5),
+                ]
+                for i in range(1, len(vuln_rows)):
+                    risk = (vuln_rows[i][3] or "").lower()
+                    if risk == "high":
+                        style_commands.append(('BACKGROUND', (3, i), (3, i), colors.HexColor('#fed7d7')))
+                    elif risk == "medium":
+                        style_commands.append(('BACKGROUND', (3, i), (3, i), colors.HexColor('#feebc8')))
+                    else:
+                        style_commands.append(('BACKGROUND', (3, i), (3, i), colors.HexColor('#c6f6d5')))
+
+                vuln_table.setStyle(TableStyle(style_commands))
+                story.append(vuln_table)
+
+            # ==================== RISK ASSESSMENT ====================
+            if job_details.risk_assessment:
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("RISK ASSESSMENT", "⚠️"))
+                story.append(Spacer(1, 10))
+
+                counts = job_details.risk_assessment.get("counts", {})
+                risk_data = [
+                    ["Overall Risk:", job_details.risk_assessment.get("overall_risk", "Low")],
+                    ["High Findings:", str(counts.get("High", 0))],
+                    ["Medium Findings:", str(counts.get("Medium", 0))],
+                    ["Low Findings:", str(counts.get("Low", 0))],
+                ]
+                story.append(PDFReportGenerator._create_info_table(risk_data))
             
             # ==================== CERTIFICATION SECTION ====================
             story.append(Spacer(1, 30))

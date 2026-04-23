@@ -207,7 +207,7 @@ class UnifiedForensicPipeline:
 
     def verify_integrity(self, file_path: str, original_hash: str, job_id: str, investigator_id: str):
         """Verifies if the current file hash matches the original chain of custody hash."""
-        current_hash = self.hash_service.compute_file_hash(file_path)
+        current_hash = self.storage_service.compute_stored_evidence_hash(file_path)
         matches = (current_hash == original_hash)
         
         return {

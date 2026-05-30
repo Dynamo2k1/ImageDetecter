@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { NavLink } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { 
+import {
   FaHome, 
   FaUpload, 
   FaListAlt, 
@@ -14,7 +14,9 @@ import {
   FaChartLine,
   FaQuestionCircle,
   FaBook,
-  FaTimes
+  FaTimes,
+  FaGlobe,
+  FaServer
 } from 'react-icons/fa';
 import { forensicAPI } from '../../services/api';
 
@@ -191,6 +193,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       items: [
         { path: '/analytics', icon: <FaChartLine />, text: 'Analytics' },
         { path: '/chain-of-custody', icon: <FaHistory />, text: 'Chain of Custody' },
+        { path: '/scanner', icon: <FaSearch />, text: 'Network Scanner' },
+        { path: '/vulnerabilities', icon: <FaShieldAlt />, text: 'Vulnerabilities' },
+      ]
+    },
+    {
+      section: 'Red Team',
+      items: [
+        { path: '/recon', icon: <FaGlobe />, text: 'Recon Module' },
       ]
     },
     {

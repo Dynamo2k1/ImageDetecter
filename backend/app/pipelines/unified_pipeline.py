@@ -124,6 +124,31 @@ class UnifiedForensicPipeline:
             )
 
             job.storage_path = storage_result.get('path')
+            
+            # Encrypt evidence file immediately after storing
+            if job.storage_path and os.path.exists(job.storage_path):
+                try:
+                    from app.services.encryption import encrypt_file
+                    temp_enc_path = job.storage_path + ".enc"
+                    encrypt_file(job.storage_path, temp_enc_path)
+                    os.replace(temp_enc_path, job.storage_path)
+                    job.is_encrypted = True
+                    logger.info(f"Evidence file encrypted at rest for job {job_id}")
+                except Exception as enc_err:
+                    logger.error(f"Failed to encrypt evidence file for job {job_id}: {str(enc_err)}")
+                    # Proceed without encryption if it fails to not block pipeline completely
+            
+            # Assign owner user ID if we can resolve investigator_id to a user
+            try:
+                # Resolve owner_user_id from investigator_id
+                # Check if investigator_id matches a user email or id
+                from app.models.sql_models import User
+                resolved_user = db.query(User).filter((User.id == investigator_id) | (User.email == investigator_id)).first()
+                if resolved_user:
+                    job.owner_user_id = resolved_user.id
+            except Exception as rbac_err:
+                logger.error(f"Failed to resolve owner user for job {job_id}: {str(rbac_err)}")
+
             job.sha256_hash = sha256_hash
             
             log = ChainOfCustody(
@@ -134,6 +159,7 @@ class UnifiedForensicPipeline:
             )
             db.add(log)
             db.commit()
+
 
             # --- 4. Report Generation ---
             job.stage = "Generating Report"

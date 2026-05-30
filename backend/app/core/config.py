@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
     LOG_LEVEL: str = "INFO"
     CHAIN_OF_CUSTODY_LOG_PATH: str = "./chain_of_custody.log"
+
+    # FEAS 2.0 Configuration
+    FEAS_ENCRYPTION_KEY: Optional[str] = None
+    NVD_API_KEY: Optional[str] = None
+    ALLOW_INTERNAL_SCAN: bool = False
     
     # --- Default Admin Credentials ---
     # SECURITY WARNING: These are development defaults only!

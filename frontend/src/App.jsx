@@ -22,6 +22,9 @@ import ProfilePage from './pages/ProfilePage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import HelpPage from './pages/HelpPage';
 import DocsPage from './pages/DocsPage';
+import ScannerPage from './pages/ScannerPage';
+import VulnerabilitiesPage from './pages/VulnerabilitiesPage';
+import ReconPage from './pages/ReconPage';
 
 // Styles
 import GlobalStyles from './styles/GlobalStyles';
@@ -63,6 +66,9 @@ function App() {
 
           {/* Feature Pages */}
           <Route path="/analytics" element={<ProtectedRoute><Layout><AnalyticsPage /></Layout></ProtectedRoute>} />
+          <Route path="/scanner" element={<ProtectedRoute><Layout><ScannerPage /></Layout></ProtectedRoute>} />
+          <Route path="/vulnerabilities" element={<ProtectedRoute><Layout><VulnerabilitiesPage /></Layout></ProtectedRoute>} />
+          <Route path="/recon" element={<ProtectedRoute><Layout><ReconPage /></Layout></ProtectedRoute>} />
           <Route path="/chain-of-custody" element={<ProtectedRoute><Layout><PlaceholderPage title="Global Chain of Custody" /></Layout></ProtectedRoute>} />
           <Route path="/security" element={<ProtectedRoute><Layout><SettingsPage /></Layout></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><Layout><HelpPage /></Layout></ProtectedRoute>} />

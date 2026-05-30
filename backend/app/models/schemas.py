@@ -50,10 +50,13 @@ class JobStatusResponse(BaseModel):
     source: str
     progress: float = Field(0.0, ge=0.0, le=100.0)
     stage: Optional[str] = None
+    integrity_status: Optional[str] = "VERIFIED"
+    is_encrypted: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class Metadata(BaseModel):
     file_name: Optional[str] = None
@@ -82,11 +85,14 @@ class JobDetailsResponse(BaseModel):
     original_url: Optional[str] = None
     file_path: str
     storage_location: str
+    integrity_status: Optional[str] = "VERIFIED"
+    is_encrypted: Optional[bool] = False
     created_at: datetime
     completed_at: Optional[datetime] = None
     
     # Allow mapping if we ever use from_attributes here too
     model_config = ConfigDict(from_attributes=True)
+
 
 class VerificationResponse(BaseModel):
     job_id: str
@@ -106,3 +112,46 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: datetime
     services: Dict[str, str]
+
+class ScanCreate(BaseModel):
+    target: str
+    job_id: Optional[str] = None
+    investigator_id: str
+
+class ScanStatusResponse(BaseModel):
+    scan_id: int
+    status: str
+    target: str
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+class VulnerabilityResponse(BaseModel):
+    id: int
+    scan_id: int
+    job_id: Optional[str] = None
+    port: Optional[int] = None
+    service: Optional[str] = None
+    version: Optional[str] = None
+    cve_id: Optional[str] = None
+    description: Optional[str] = None
+    cvss_score: Optional[float] = None
+    severity: Optional[str] = None
+    risk_level: Optional[str] = None
+    nvd_url: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CorrelationCreate(BaseModel):
+    job_id: str
+    investigator_id: str
+
+class CorrelationResponse(BaseModel):
+    id: int
+    job_id: str
+    correlation_timestamp: datetime
+    result_json: Dict[str, Any]
+    correlation_score: int
+    generated_by: str
+
+    model_config = ConfigDict(from_attributes=True)

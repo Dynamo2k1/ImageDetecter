@@ -190,7 +190,19 @@ const VisibilityToggle = styled.button`
   }
 `;
 
-const SHA256Display = ({ hash, jobId }) => {
+const StatusBadge = styled.span`
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  background: ${({ status, theme }) => status === 'VERIFIED' ? '#c6f6d5' : '#fed7d7'};
+  color: ${({ status, theme }) => status === 'VERIFIED' ? '#22543d' : '#9b2c2c'};
+  border: 1px solid ${({ status }) => status === 'VERIFIED' ? '#c6f6d5' : '#feb2b2'};
+`;
+
+const SHA256Display = ({ hash, jobId, integrityStatus = 'VERIFIED' }) => {
   const [copied, setCopied] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -235,6 +247,9 @@ const SHA256Display = ({ hash, jobId }) => {
         <Title>
           SHA-256 <span>Digital Fingerprint</span>
         </Title>
+        <StatusBadge status={integrityStatus}>
+          {integrityStatus === 'VERIFIED' ? '✓ Integrity Verified' : '✗ Compromised'}
+        </StatusBadge>
       </Header>
       
       <HashContainer>

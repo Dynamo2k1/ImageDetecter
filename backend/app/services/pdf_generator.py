@@ -451,9 +451,495 @@ class PDFReportGenerator:
         except Exception as e:
             logger.error(f"PDF generation failed: {str(e)}")
             raise
-    
+
+    @staticmethod
+    def generate_custom_report(report_data: Dict[str, Any]) -> str:
+        """Generate professional custom PDF report based on selected sections and scan/cve/correlation outputs"""
+        try:
+            # Create temporary file for PDF
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+            temp_path = temp_file.name
+            temp_file.close()
+            
+            # Create document with adjusted margins for header/footer
+            doc = SimpleDocTemplate(
+                temp_path,
+                pagesize=letter,
+                rightMargin=inch,
+                leftMargin=inch,
+                topMargin=1.3*inch,
+                bottomMargin=0.8*inch
+            )
+            
+            styles = PDFReportGenerator._create_styles()
+            story = []
+            
+            # ==================== TITLE PAGE ====================
+            story.append(Spacer(1, 60))
+            story.append(Paragraph("FORENSIC EVIDENCE REPORT", styles['ReportTitle']))
+            story.append(Paragraph("Digital Evidence Acquisition & Analysis", styles['ReportSubtitle']))
+            
+            # Report summary box
+            story.append(Spacer(1, 20))
+            
+            source_str = str(report_data.get('source', '')).upper()
+            platform_str = str(report_data.get('platform_metadata', {}).get('platform', 'LOCAL')).upper()
+            if not platform_str:
+                platform_str = "LOCAL"
+            
+            summary_data = [
+                ["REPORT SUMMARY", ""],
+                ["Job Reference:", report_data.get('job_id', '')],
+                ["Evidence Source:", f"{source_str} ({platform_str})"],
+                ["Status:", str(report_data.get('status', '')).upper()],
+                ["Report Generated:", datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')],
+            ]
+            
+            summary_table = Table(summary_data, colWidths=[2*inch, 4.5*inch])
+            summary_table.setStyle(TableStyle([
+                ('SPAN', (0, 0), (-1, 0)),
+                ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.PRIMARY),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('BACKGROUND', (0, 1), (0, -1), ForensicColors.LIGHT_BG),
+                ('TEXTCOLOR', (0, 1), (0, -1), ForensicColors.SECONDARY),
+                ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('PADDING', (0, 0), (-1, -1), 10),
+                ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                ('BOX', (0, 0), (-1, -1), 2, ForensicColors.PRIMARY),
+            ]))
+            story.append(summary_table)
+            
+            # ==================== CASE INFORMATION ====================
+            story.append(Spacer(1, 25))
+            story.append(PDFReportGenerator._create_section_header_table("CASE INFORMATION", "📋"))
+            story.append(Spacer(1, 10))
+            
+            case_data = [
+                ["Job ID:", report_data.get('job_id', '')],
+                ["Source Type:", source_str],
+                ["Platform:", platform_str],
+                ["Acquisition Date:", report_data.get('created_at').strftime('%Y-%m-%d %H:%M:%S UTC') if report_data.get('created_at') else "N/A"],
+                ["Completion Date:", report_data.get('completed_at').strftime('%Y-%m-%d %H:%M:%S UTC') if report_data.get('completed_at') else "In Progress"],
+            ]
+            
+            if report_data.get('original_url'):
+                url = report_data.get('original_url')
+                truncated = url[:60] + "..." if len(url) > 60 else url
+                case_data.append(["Original URL:", truncated])
+            
+            story.append(PDFReportGenerator._create_info_table(case_data))
+            
+            # ==================== DIGITAL FINGERPRINT ====================
+            story.append(Spacer(1, 25))
+            story.append(PDFReportGenerator._create_section_header_table("DIGITAL FINGERPRINT", "🔐"))
+            story.append(Spacer(1, 10))
+            
+            file_size = report_data.get('file_size') or 0
+            if file_size >= 1024 * 1024:
+                size_str = f"{file_size / (1024 * 1024):.2f} MB ({file_size:,} bytes)"
+            elif file_size >= 1024:
+                size_str = f"{file_size / 1024:.2f} KB ({file_size:,} bytes)"
+            else:
+                size_str = f"{file_size:,} bytes"
+            
+            hash_data = [
+                ["SHA-256 Hash:", report_data.get('sha256_hash') or "N/A"],
+                ["File Name:", report_data.get('filename') or "N/A"],
+                ["File Size:", size_str],
+                ["MIME Type:", report_data.get('mime_type') or "N/A"],
+            ]
+            
+            story.append(PDFReportGenerator._create_info_table(hash_data))
+            
+            story.append(Spacer(1, 10))
+            integrity_val = report_data.get('integrity_status', 'VERIFIED')
+            if integrity_val == "COMPROMISED":
+                notice_text = (
+                    '<font color="#c53030"><b>✗ INTEGRITY CRITICAL WARNING:</b></font> The SHA-256 hash '
+                    'of this evidence is COMPROMISED. A digital fingerprint verification check has failed, '
+                    'indicating the file was modified, tampered with, or corrupted post-acquisition.'
+                )
+            else:
+                notice_text = (
+                    '<font color="#276749"><b>✓ INTEGRITY NOTICE:</b></font> The SHA-256 hash above '
+                    'serves as the unique digital fingerprint for this evidence. Any modification to '
+                    'the original file will produce a different hash value, indicating potential '
+                    'tampering. Verify this hash against the original to confirm evidence integrity.'
+                )
+            story.append(Paragraph(notice_text, styles['ForensicBodyText']))
+            
+            # ==================== CHAIN OF CUSTODY ====================
+            if report_data.get('include_custody'):
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("CHAIN OF CUSTODY", "🔗"))
+                story.append(Spacer(1, 10))
+                
+                logs = report_data.get('chain_of_custody', [])
+                if logs:
+                    custody_data = [["#", "Timestamp", "Event", "Investigator", "Details"]]
+                    for idx, entry in enumerate(logs, 1):
+                        details_str = str(entry.details) if entry.details else ""
+                        if len(details_str) > 80:
+                            details_str = details_str[:80] + "..."
+                        
+                        custody_data.append([
+                            str(idx),
+                            entry.timestamp.strftime('%Y-%m-%d\n%H:%M:%S') if entry.timestamp else "N/A",
+                            entry.event or "N/A",
+                            entry.investigator_id or "N/A",
+                            details_str
+                        ])
+                    
+                    custody_table = Table(custody_data, colWidths=[0.4*inch, 1*inch, 1.3*inch, 1.2*inch, 2.6*inch])
+                    
+                    style_commands = [
+                        ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.SECONDARY),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 9),
+                        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                        ('FONTSIZE', (0, 1), (-1, -1), 8),
+                        ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('PADDING', (0, 0), (-1, -1), 6),
+                        ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                        ('BOX', (0, 0), (-1, -1), 1, ForensicColors.SECONDARY),
+                    ]
+                    
+                    for i in range(1, len(custody_data)):
+                        if i % 2 == 0:
+                            style_commands.append(('BACKGROUND', (0, i), (-1, i), ForensicColors.LIGHT_BG))
+                    
+                    custody_table.setStyle(TableStyle(style_commands))
+                    story.append(custody_table)
+                else:
+                    story.append(Paragraph("<i>No chain of custody entries recorded.</i>", styles['ForensicBodyText']))
+
+            # ==================== NETWORK SCANNING ====================
+            if report_data.get('include_scans') and report_data.get('scans'):
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("NETWORK SCANNING RESULTS", "🌐"))
+                story.append(Spacer(1, 10))
+                
+                scans = report_data.get('scans', [])
+                for idx, s in enumerate(scans, 1):
+                    status_str = (s.status or "").upper()
+                    scan_data = [
+                        [f"Scan #{idx} Details", ""],
+                        ["Target:", s.target],
+                        ["Scan Date:", s.scan_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') if s.scan_timestamp else "N/A"],
+                        ["Status:", status_str],
+                        ["Initiated By User:", s.initiated_by or "N/A"]
+                    ]
+                    
+                    scan_info_table = Table(scan_data, colWidths=[2.2*inch, 4.3*inch])
+                    scan_info_table.setStyle(TableStyle([
+                        ('SPAN', (0, 0), (-1, 0)),
+                        ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.SECONDARY),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 10),
+                        ('BACKGROUND', (0, 1), (0, -1), ForensicColors.LIGHT_BG),
+                        ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 1), (-1, -1), 9),
+                        ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                        ('BOX', (0, 0), (-1, -1), 1, ForensicColors.SECONDARY),
+                        ('PADDING', (0, 0), (-1, -1), 5),
+                    ]))
+                    story.append(scan_info_table)
+                    story.append(Spacer(1, 8))
+                    
+                    if status_str == "COMPLETED" and s.result_json:
+                        res = s.result_json
+                        hosts = res.get("hosts", [])
+                        for h in hosts:
+                            host_desc = f"<b>Host IP:</b> {h.get('ip')} | <b>Hostname:</b> {h.get('hostname') or 'N/A'} | <b>State:</b> {h.get('state')} | <b>OS:</b> {h.get('os_detection') or 'Unknown'}"
+                            story.append(Paragraph(host_desc, styles['ForensicBodyText']))
+                            story.append(Spacer(1, 4))
+                            
+                            ports = h.get("ports", [])
+                            if ports:
+                                port_table_data = [["Port", "Protocol", "State", "Service", "Version"]]
+                                for p in ports:
+                                    port_table_data.append([
+                                        str(p.get("port")),
+                                        p.get("protocol", "tcp"),
+                                        p.get("state", "unknown"),
+                                        p.get("service", "unknown"),
+                                        p.get("version", "")
+                                    ])
+                                
+                                port_table = Table(port_table_data, colWidths=[1*inch, 1*inch, 1*inch, 1.5*inch, 2*inch])
+                                port_table.setStyle(TableStyle([
+                                    ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.LIGHT_BG),
+                                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                                    ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                    ('PADDING', (0, 0), (-1, -1), 4),
+                                ]))
+                                story.append(port_table)
+                                story.append(Spacer(1, 10))
+                            else:
+                                story.append(Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;<i>No open ports discovered on this host.</i>", styles['ForensicBodyText']))
+                                story.append(Spacer(1, 8))
+                    elif status_str == "FAILED":
+                        err_text = f'<font color="#c53030"><b>Scan Error:</b> {s.error_message or "Unknown failure during nmap scan."}</font>'
+                        story.append(Paragraph(err_text, styles['ForensicBodyText']))
+                        story.append(Spacer(1, 10))
+                    else:
+                        story.append(Paragraph("<i>Scan is pending or currently running. No results available.</i>", styles['ForensicBodyText']))
+                        story.append(Spacer(1, 10))
+
+            # ==================== VULNERABILITIES ====================
+            if report_data.get('include_vulnerabilities') and report_data.get('vulnerabilities'):
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("CVE VULNERABILITY FINDINGS", "⚠️"))
+                story.append(Spacer(1, 10))
+                
+                vulns = report_data.get('vulnerabilities', [])
+                if vulns:
+                    vuln_table_data = [["Port/Svc", "CVE ID", "CVSS", "Severity", "Description"]]
+                    
+                    for v in vulns:
+                        svc_desc = f"{v.port}/{v.service or ''}"
+                        cve_desc = v.cve_id or "N/A"
+                        cvss_val = str(v.cvss_score) if v.cvss_score is not None else "N/A"
+                        sev_val = (v.severity or "Unknown").upper()
+                        
+                        desc_para = Paragraph(v.description or "No description provided.", styles['ForensicBodyText'])
+                        
+                        vuln_table_data.append([
+                            svc_desc,
+                            cve_desc,
+                            cvss_val,
+                            sev_val,
+                            desc_para
+                        ])
+                    
+                    vuln_table = Table(vuln_table_data, colWidths=[1*inch, 1*inch, 0.6*inch, 1.1*inch, 2.8*inch])
+                    
+                    style_commands = [
+                        ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.SECONDARY),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 8),
+                        ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('ALIGN', (0, 0), (3, -1), 'CENTER'),
+                        ('PADDING', (0, 0), (-1, -1), 5),
+                    ]
+                    
+                    for i in range(1, len(vuln_table_data)):
+                        sev_text = vuln_table_data[i][3]
+                        bg_color = ForensicColors.LIGHT_BG
+                        text_color = ForensicColors.TEXT
+                        if sev_text == "CRITICAL":
+                            bg_color = colors.HexColor('#fed7d7')
+                            text_color = colors.HexColor('#9b2c2c')
+                        elif sev_text == "HIGH":
+                            bg_color = colors.HexColor('#feebc8')
+                            text_color = colors.HexColor('#c05621')
+                        elif sev_text == "MEDIUM":
+                            bg_color = colors.HexColor('#feebc8')
+                            text_color = colors.HexColor('#dd6b20')
+                        elif sev_text == "LOW":
+                            bg_color = colors.HexColor('#e2e8f0')
+                            text_color = colors.HexColor('#4a5568')
+                        elif sev_text == "INFORMATIONAL":
+                            bg_color = colors.HexColor('#ebf8ff')
+                            text_color = colors.HexColor('#2b6cb0')
+                            
+                        style_commands.append(('BACKGROUND', (3, i), (3, i), bg_color))
+                        style_commands.append(('TEXTCOLOR', (3, i), (3, i), text_color))
+                        style_commands.append(('FONTNAME', (3, i), (3, i), 'Helvetica-Bold'))
+                        
+                        if i % 2 == 0:
+                            style_commands.append(('BACKGROUND', (0, i), (2, i), ForensicColors.LIGHT_BG))
+                            style_commands.append(('BACKGROUND', (4, i), (4, i), ForensicColors.LIGHT_BG))
+                    
+                    vuln_table.setStyle(TableStyle(style_commands))
+                    story.append(vuln_table)
+                else:
+                    story.append(Paragraph("<i>No vulnerabilities mapped.</i>", styles['ForensicBodyText']))
+                story.append(Spacer(1, 10))
+
+            # ==================== CORRELATION & ATTACK ANALYSIS ====================
+            if report_data.get('include_correlation') and report_data.get('correlation'):
+                corr = report_data.get('correlation')
+                story.append(Spacer(1, 25))
+                story.append(PDFReportGenerator._create_section_header_table("EVIDENCE CORRELATION & RISK ASSESSMENT", "🧠"))
+                story.append(Spacer(1, 10))
+                
+                score = corr.get("score", 0)
+                if score >= 75:
+                    score_bg = colors.HexColor('#fed7d7')
+                    score_text_color = colors.HexColor('#9b2c2c')
+                    score_label = "CRITICAL SECURITY RISK"
+                elif score >= 50:
+                    score_bg = colors.HexColor('#feebc8')
+                    score_text_color = colors.HexColor('#c05621')
+                    score_label = "HIGH SECURITY RISK"
+                elif score >= 25:
+                    score_bg = colors.HexColor('#fefcbf')
+                    score_text_color = colors.HexColor('#744210')
+                    score_label = "MEDIUM SECURITY RISK"
+                else:
+                    score_bg = colors.HexColor('#c6f6d5')
+                    score_text_color = colors.HexColor('#22543d')
+                    score_label = "LOW SECURITY RISK"
+                
+                score_data = [[
+                    f"Overall Case Risk Score: {score} / 100  |  {score_label}"
+                ]]
+                score_table = Table(score_data, colWidths=[6.5*inch])
+                score_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), score_bg),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), score_text_color),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 11),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('PADDING', (0, 0), (-1, -1), 8),
+                    ('BOX', (0, 0), (-1, -1), 1.5, score_text_color),
+                ]))
+                story.append(score_table)
+                story.append(Spacer(1, 15))
+                
+                flags = corr.get("flags", [])
+                if flags:
+                    story.append(Paragraph("<b>System Warning Flags:</b>", styles['SubsectionHeader']))
+                    for f in flags:
+                        sev = f.get("severity", "MEDIUM")
+                        color_prefix = '<font color="#c53030"><b>[CRITICAL]</b></font>' if sev == "CRITICAL" else '<font color="#dd6b20"><b>[HIGH]</b></font>' if sev == "HIGH" else '<b>[MEDIUM]</b>'
+                        flag_text = f"{color_prefix} <b>{f.get('title')}:</b> {f.get('description')}"
+                        story.append(Paragraph(flag_text, styles['ForensicBodyText']))
+                        story.append(Spacer(1, 4))
+                    story.append(Spacer(1, 10))
+
+                hypotheses = corr.get("attack_hypotheses", [])
+                if hypotheses:
+                    story.append(Paragraph("<b>Generated Attack Scenario Hypotheses:</b>", styles['SubsectionHeader']))
+                    for idx, h in enumerate(hypotheses, 1):
+                        prob = h.get("probability", "Medium")
+                        prob_color = "#c53030" if prob in ["Critical", "High"] else "#dd6b20" if prob == "Medium" else "#276749"
+                        scenario_header = f"<b>Hypothesis {idx}: {h.get('scenario')}</b> (Probability: <font color=\"{prob_color}\"><b>{prob}</b></font>)"
+                        story.append(Paragraph(scenario_header, styles['ForensicBodyText']))
+                        story.append(Paragraph(h.get("description", ""), styles['ForensicBodyText']))
+                        story.append(Spacer(1, 6))
+                    story.append(Spacer(1, 10))
+
+                timeline = corr.get("timeline", [])
+                if timeline:
+                    story.append(Paragraph("<b>Unified Chronological Incident Timeline:</b>", styles['SubsectionHeader']))
+                    timeline_data = [["Timestamp", "Event Name", "Actor", "Details"]]
+                    for item in timeline:
+                        ts_str = item.get("timestamp", "")
+                        if ts_str:
+                            try:
+                                if "T" in ts_str:
+                                    dt = datetime.fromisoformat(ts_str.split(".")[0])
+                                    ts_str = dt.strftime('%Y-%m-%d\n%H:%M:%S')
+                            except Exception:
+                                pass
+                        
+                        det_str = str(item.get("details", ""))
+                        if len(det_str) > 75:
+                            det_str = det_str[:75] + "..."
+                            
+                        timeline_data.append([
+                            ts_str,
+                            item.get("event", ""),
+                            item.get("investigator_id", ""),
+                            det_str
+                        ])
+                    
+                    timeline_table = Table(timeline_data, colWidths=[1.1*inch, 1.6*inch, 1*inch, 2.8*inch])
+                    style_cmds = [
+                        ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.LIGHT_BG),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 8),
+                        ('GRID', (0, 0), (-1, -1), 0.5, ForensicColors.BORDER),
+                        ('ALIGN', (0, 0), (2, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('PADDING', (0, 0), (-1, -1), 4),
+                    ]
+                    for i in range(1, len(timeline_data)):
+                        if i % 2 == 0:
+                            style_cmds.append(('BACKGROUND', (0, i), (-1, i), colors.Color(0.97, 0.97, 0.99)))
+                    timeline_table.setStyle(TableStyle(style_cmds))
+                    story.append(timeline_table)
+                    story.append(Spacer(1, 10))
+
+            # ==================== CERTIFICATION SECTION ====================
+            story.append(Spacer(1, 20))
+            story.append(PDFReportGenerator._create_section_header_table("CERTIFICATION", "✅"))
+            story.append(Spacer(1, 10))
+            
+            cert_text = (
+                'This report certifies that the digital evidence described herein has been acquired, '
+                'processed, and documented in accordance with forensic best practices. The chain of custody '
+                'has been maintained throughout the acquisition process, and all digital fingerprints have '
+                'been recorded for integrity verification purposes.'
+            )
+            story.append(Paragraph(cert_text, styles['ForensicBodyText']))
+            
+            story.append(Spacer(1, 20))
+            
+            sig_data = [
+                ["VERIFICATION", "", ""],
+                ["Examiner Signature:", "________________________", "Date: ____________"],
+                ["Supervisor Signature:", "________________________", "Date: ____________"],
+                ["Report Seal:", "________________________", ""],
+            ]
+            
+            sig_table = Table(sig_data, colWidths=[1.8*inch, 2.5*inch, 2.2*inch])
+            sig_table.setStyle(TableStyle([
+                ('SPAN', (0, 0), (-1, 0)),
+                ('BACKGROUND', (0, 0), (-1, 0), ForensicColors.LIGHT_BG),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('TEXTCOLOR', (0, 1), (-1, -1), ForensicColors.MUTED),
+                ('PADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING', (0, 1), (-1, -1), 15),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 15),
+                ('BOX', (0, 0), (-1, -1), 1, ForensicColors.BORDER),
+            ]))
+            story.append(sig_table)
+            
+            # ==================== DISCLAIMER ====================
+            story.append(Spacer(1, 25))
+            disclaimer_text = (
+                '<font size="8" color="#718096"><b>DISCLAIMER:</b> This forensic evidence report is generated '
+                'automatically by the Forensic Evidence Acquisition System (FEAS). The information contained herein '
+                'is intended for law enforcement and authorized personnel only. Unauthorized distribution, modification, '
+                'or use of this report may be subject to legal penalties. The integrity of this evidence should be '
+                'verified using the SHA-256 hash provided above before use in any legal proceedings.</font>'
+            )
+            story.append(Paragraph(disclaimer_text, styles['Normal']))
+            
+            # Build PDF
+            doc.build(story, 
+                     onFirstPage=PDFReportGenerator.create_header_footer,
+                     onLaterPages=PDFReportGenerator.create_header_footer)
+            
+            logger.info(f"Custom PDF report generated: {temp_path}")
+            return temp_path
+            
+        except Exception as e:
+            logger.error(f"Custom PDF generation failed: {str(e)}")
+            raise
+
     @staticmethod
     def create_verification_report(job_id: str, 
+
                                   verification_result: Dict[str, Any]) -> str:
         """Create professional verification report"""
         try:

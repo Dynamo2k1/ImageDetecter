@@ -1,0 +1,182 @@
+[
+  {
+    "service": "http",
+    "version_contains": "2.4.49",
+    "cve_id": "CVE-2021-41773",
+    "description": "Path traversal and file disclosure vulnerability in Apache HTTP Server 2.4.49, allowing remote attackers to execute arbitrary commands.",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "ssh",
+    "version_contains": "OpenSSH_7.2p2",
+    "cve_id": "CVE-2016-6210",
+    "description": "User enumeration vulnerability in OpenSSH 7.2 and earlier via long password attempts.",
+    "cvss_score": 5.3,
+    "severity": "Medium",
+    "risk_level": "Medium"
+  },
+  {
+    "service": "ftp",
+    "version_contains": "vsftpd 2.3.4",
+    "cve_id": "CVE-2011-2523",
+    "description": "Backdoor execution vulnerability in vsftpd 2.3.4 download package, allowing remote root command execution.",
+    "cvss_score": 10.0,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "http",
+    "version_contains": "Apache/2.4.50",
+    "cve_id": "CVE-2021-42013",
+    "description": "Path traversal and remote code execution vulnerability in Apache HTTP Server 2.4.50 (incomplete fix for CVE-2021-41773).",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "http",
+    "version_contains": "nginx/1.17.7",
+    "cve_id": "CVE-2021-23017",
+    "description": "1-byte memory overwrite vulnerability in Nginx DNS resolver, allowing remote attackers to trigger denial of service or code execution.",
+    "cvss_score": 8.1,
+    "severity": "High",
+    "risk_level": "High"
+  },
+  {
+    "service": "mysql",
+    "version_contains": "5.5.",
+    "cve_id": "CVE-2016-6662",
+    "description": "Remote root code execution vulnerability in MySQL 5.5, 5.6, and 5.7 via configuration file injection.",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "ssh",
+    "version_contains": "OpenSSH_8.4",
+    "cve_id": "CVE-2021-28041",
+    "description": "Double-free memory corruption vulnerability in OpenSSH ssh-agent, potentially allowing local code execution.",
+    "cvss_score": 7.1,
+    "severity": "High",
+    "risk_level": "High"
+  },
+  {
+    "service": "http",
+    "version_contains": "Apache/2.4.41",
+    "cve_id": "CVE-2020-1927",
+    "description": "Mod_rewrite open redirect vulnerability in Apache HTTP Server 2.4.0 through 2.4.41 via unescaped carriage return characters.",
+    "cvss_score": 6.1,
+    "severity": "Medium",
+    "risk_level": "Medium"
+  },
+  {
+    "service": "ftp",
+    "version_contains": "ProFTPD 1.3.5",
+    "cve_id": "CVE-2015-3306",
+    "description": "Unauthenticated file copy vulnerability in mod_copy in ProFTPD 1.3.5, allowing remote site-to-site copy and execution.",
+    "cvss_score": 10.0,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "netbios-ssn",
+    "version_contains": "Samba 4.13.0",
+    "cve_id": "CVE-2021-44142",
+    "description": "Out-of-bounds heap read/write vulnerability in Samba vfs_fruit module, leading to remote root command execution.",
+    "cvss_score": 9.9,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "smtp",
+    "version_contains": "Exim 4.93",
+    "cve_id": "CVE-2020-28018",
+    "description": "Use-after-free vulnerability in Exim Mail Transfer Agent, allowing unauthenticated remote command execution as root.",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "http",
+    "version_contains": "Tomcat 9.0.30",
+    "cve_id": "CVE-2020-1938",
+    "description": "Apache Tomcat AJP Connector file read/inclusion vulnerability (Ghostcat), allowing remote file reading and code execution.",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "postgresql",
+    "version_contains": "12.2",
+    "cve_id": "CVE-2020-14349",
+    "description": "SQL injection and privilege escalation vulnerability in PostgreSQL via search_path configuration settings.",
+    "cvss_score": 8.8,
+    "severity": "High",
+    "risk_level": "High"
+  },
+  {
+    "service": "ssh",
+    "version_contains": "OpenSSH_7.4",
+    "cve_id": "CVE-2018-15473",
+    "description": "OpenSSH username enumeration vulnerability via malformed packets, exposing investigator/system usernames.",
+    "cvss_score": 5.3,
+    "severity": "Medium",
+    "risk_level": "Medium"
+  },
+  {
+    "service": "http",
+    "version_contains": "WordPress/5.8",
+    "cve_id": "CVE-2022-21661",
+    "description": "SQL Injection vulnerability in WordPress core query classes, leading to complete database takeover.",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "redis",
+    "version_contains": "6.0.9",
+    "cve_id": "CVE-2021-32761",
+    "description": "Integer overflow leading to heap corruption in Redis lua scripting modules, causing crashes or command execution.",
+    "cvss_score": 8.8,
+    "severity": "High",
+    "risk_level": "High"
+  },
+  {
+    "service": "http",
+    "version_contains": "IIS/8.5",
+    "cve_id": "CVE-2015-1635",
+    "description": "Remote code execution vulnerability in Microsoft IIS HTTP.sys via custom range headers (MS15-034).",
+    "cvss_score": 10.0,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "dns",
+    "version_contains": "BIND 9.16.0",
+    "cve_id": "CVE-2020-8617",
+    "description": "Assertion failure denial of service vulnerability in BIND DNS resolver daemon via TSIG response processing.",
+    "cvss_score": 7.5,
+    "severity": "High",
+    "risk_level": "High"
+  },
+  {
+    "service": "http",
+    "version_contains": "Drupal/8.9.0",
+    "cve_id": "CVE-2020-13671",
+    "description": "Arbitrary file upload and remote code execution vulnerability in Drupal core via double extensions file handling.",
+    "cvss_score": 9.8,
+    "severity": "Critical",
+    "risk_level": "Critical"
+  },
+  {
+    "service": "ssh",
+    "version_contains": "OpenSSH_8.9",
+    "cve_id": "CVE-2023-38408",
+    "description": "Remote code execution vulnerability in OpenSSH ssh-agent PKCS#11 module loading settings.",
+    "cvss_score": 8.1,
+    "severity": "High",
+    "risk_level": "High"
+  }
+]
